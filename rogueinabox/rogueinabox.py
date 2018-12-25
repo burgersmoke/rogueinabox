@@ -17,8 +17,6 @@
 
 import time
 import os
-import fcntl
-import pty
 import signal
 import shlex
 import pyte
@@ -29,6 +27,17 @@ import scipy
 
 import rewards
 import states
+
+# make sure that we can choose something that works under Windows
+if os.name == 'nt':
+    print('Setting up for Windows...')
+    import win32api
+    import winpty
+else:
+    print('Setting up for POSIX...')
+    import fcntl
+    import pty
+
 
 class Terminal:
     def __init__(self, columns, lines):
@@ -43,26 +52,6 @@ class Terminal:
         return self.screen.display
 
 
-def open_terminal(command="bash", columns=80, lines=24):
-    p_pid, master_fd = pty.fork()
-    if p_pid == 0:  # Child.
-        path, *args = shlex.split(command)
-        args = [path] + args
-        env = dict(TERM="linux", LC_ALL="en_GB.UTF-8",
-                   COLUMNS=str(columns), LINES=str(lines))
-        try:
-            os.execvpe(path, args, env)
-        except FileNotFoundError:
-            print("Could not find the executable in %s. Press any key to exit." % path)
-            exit()
-
-    # set non blocking read
-    flag = fcntl.fcntl(master_fd, fcntl.F_GETFD)
-    fcntl.fcntl(master_fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
-    # File-like object for I/O with the child process aka command.
-    p_out = os.fdopen(master_fd, "w+b", 0)
-    return Terminal(columns, lines), p_pid, p_out
-
 
 class RogueBox:
     """Start a rogue game and expose interface to communicate with it"""
@@ -72,7 +61,14 @@ class RogueBox:
         """start rogue and get initial screen"""
         self.configs = configs
         self.rogue_path = self.configs["rogue"]
-        self.terminal, self.pid, self.pipe = open_terminal(command=self.rogue_path)
+
+        if os.name == 'nt':
+            print('Setting up Terminal for Windows...')
+            self.terminal, self.pid, self.pipe = self.open_terminal_windows(command=self.rogue_path)
+        else:
+            print('Setting up Terminal for POSIX...')
+            self.terminal, self.pid, self.pipe = self.open_terminal(command=self.rogue_path)
+
         # our internal screen is list of lines, each line is a string
         # can be indexed as a 24x80 matrix
         self.screen = []
@@ -91,6 +87,30 @@ class RogueBox:
         self.parse_statusbar_re = self._compile_statusbar_re()
         self.reward_generator = getattr(rewards, self.configs["reward_generator"])(self)
         self.state_generator = getattr(states, self.configs["state_generator"])(self)
+        
+    def open_terminal_windows(self, command="bash", columns=80, lines=24):
+        print('TODO : Implement ME!!!!')
+        return None, None, None
+        
+    def open_terminal(self, command="bash", columns=80, lines=24):
+        p_pid, master_fd = pty.fork()
+        if p_pid == 0:  # Child.
+            path, *args = shlex.split(command)
+            args = [path] + args
+            env = dict(TERM="linux", LC_ALL="en_GB.UTF-8",
+                       COLUMNS=str(columns), LINES=str(lines))
+            try:
+                os.execvpe(path, args, env)
+            except FileNotFoundError:
+                print("Could not find the executable in %s. Press any key to exit." % path)
+                exit()
+
+        # set non blocking read
+        flag = fcntl.fcntl(master_fd, fcntl.F_GETFD)
+        fcntl.fcntl(master_fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
+        # File-like object for I/O with the child process aka command.
+        p_out = os.fdopen(master_fd, "w+b", 0)
+        return Terminal(columns, lines), p_pid, p_out
 
     @staticmethod
     def _compile_statusbar_re():

@@ -17,3 +17,4 @@ rogueinabox/assets
 /rogueinabox/rogomatic
 /rogue.scr
 plots/
+/rogueinabox/ui/__pycache__/*
