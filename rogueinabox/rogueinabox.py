@@ -33,6 +33,7 @@ if os.name == 'nt':
     print('Setting up for Windows...')
     import win32api
     import winpty
+    from winpty import PTY
 else:
     print('Setting up for POSIX...')
     import fcntl
@@ -64,7 +65,8 @@ class RogueBox:
 
         if os.name == 'nt':
             print('Setting up Terminal for Windows...')
-            self.terminal, self.pid, self.pipe = self.open_terminal_windows(command=self.rogue_path)
+            # make sure to prefix with cygstart
+            self.terminal, self.pid, self.pipe = self.open_terminal_windows(command='cygstart ' + self.rogue_path + '.exe')
         else:
             print('Setting up Terminal for POSIX...')
             self.terminal, self.pid, self.pipe = self.open_terminal(command=self.rogue_path)
@@ -90,7 +92,19 @@ class RogueBox:
         
     def open_terminal_windows(self, command="bash", columns=80, lines=24):
         print('TODO : Implement ME!!!!')
-        return None, None, None
+        
+        p_pid = PTY(columns, lines)
+
+        # Spawn a new console process, e.g., CMD
+        print('command : [{0}]'.format(command))
+        p_pid.spawn(command)
+
+        # make a file object from the socket
+        master_fd = p_pid.makefile()
+        
+        p_out = os.fdopen(master_fd, "w+b", 0)
+        
+        return Terminal(columns, lines), None, None
         
     def open_terminal(self, command="bash", columns=80, lines=24):
         p_pid, master_fd = pty.fork()
