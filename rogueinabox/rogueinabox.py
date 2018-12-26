@@ -63,10 +63,13 @@ class RogueBox:
         self.configs = configs
         self.rogue_path = self.configs["rogue"]
 
+        self.iswindows = False
         if os.name == 'nt':
             print('Setting up Terminal for Windows...')
+            self.iswindows = True
             # make sure to prefix with cygstart
-            self.terminal, self.pid, self.pipe = self.open_terminal_windows(command='cygstart ' + self.rogue_path + '.exe')
+            win_command = 'cygstart ' + self.rogue_path + '.exe'
+            self.terminal, self.pid, self.pipe = self.open_terminal_windows(command=win_command)
         else:
             print('Setting up Terminal for POSIX...')
             self.terminal, self.pid, self.pipe = self.open_terminal(command=self.rogue_path)
@@ -93,18 +96,41 @@ class RogueBox:
     def open_terminal_windows(self, command="bash", columns=80, lines=24):
         print('TODO : Implement ME!!!!')
         
-        p_pid = PTY(columns, lines)
+        if True:
+            print('Trying PtyProcess API...')
+            print('command : [{}]'.format(command))
+            self.ptyproc = winpty.PtyProcess.spawn(command)
+            print('self.ptyproc : {}'.format(self.ptyproc))
+            
+            p_pid = self.ptyproc.pid
+            print('p_pid : {}'.format(p_pid))
+            p_out = self.ptyproc.fileobj
+            print('p_out : {}'.format(p_out))
+            
+            test_read = self.ptyproc.read()
+            print(test_read)
+            
+        else:
+            print('Trying PTY API...')
+            #p_pid = PTY(columns, lines)
+            
+            #path, *args = shlex.split(command)
+            #args = [path] + args
+            #env = dict(TERM="linux", LC_ALL="en_GB.UTF-8",
+            #           COLUMNS=str(columns), LINES=str(lines))
+                       
+            # Spawn a new console process, e.g., CMD
+            #print('command : [{0}]'.format(command))
+            #p_pid.spawn(command
+            #, env = env
+            #)
 
-        # Spawn a new console process, e.g., CMD
-        print('command : [{0}]'.format(command))
-        p_pid.spawn(command)
-
-        # make a file object from the socket
-        master_fd = p_pid.makefile()
+            # make a file object from the socket
+            #master_fd = p_pid.makefile()
+            
+            #p_out = os.fdopen(master_fd, "w+b", 0)
         
-        p_out = os.fdopen(master_fd, "w+b", 0)
-        
-        return Terminal(columns, lines), None, None
+        return Terminal(columns, lines), p_pid, p_out
         
     def open_terminal(self, command="bash", columns=80, lines=24):
         p_pid, master_fd = pty.fork()
@@ -222,14 +248,19 @@ class RogueBox:
 
     def is_running(self):
         """check if the rogue process exited"""
-        try:
-            pid, status = os.waitpid(self.pid, os.WNOHANG)
-        except OSError:
-            return False
-        if pid == 0:
-            return True
+        
+        if self.iswindows:
+            return self.ptyproc.isalive()
         else:
-            return False
+            # logic for non-windows platforms
+            try:
+                pid, status = os.waitpid(self.pid, os.WNOHANG)
+            except OSError:
+                return False
+            if pid == 0:
+                return True
+            else:
+                return False
 
     def compute_state(self):
         """return a numpy array representation of the current state
