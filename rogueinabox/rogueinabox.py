@@ -68,8 +68,9 @@ class RogueBox:
             print('Setting up Terminal for Windows...')
             self.iswindows = True
             # make sure to prefix with cygstart
-            win_command = 'cygstart ' + self.rogue_path + '.exe'
+            win_command = r'C:\cygwin64\bin\cygstart.exe --wait ' + self.rogue_path + '.exe'
             self.terminal, self.pid, self.pipe = self.open_terminal_windows(command=win_command)
+            print('self.terminal, self.pid, self.pipe : {0}, {1}, {2}'.format(self.terminal, self.pid, self.pipe))
         else:
             print('Setting up Terminal for POSIX...')
             self.terminal, self.pid, self.pipe = self.open_terminal(command=self.rogue_path)
@@ -96,14 +97,21 @@ class RogueBox:
     def open_terminal_windows(self, command="bash", columns=80, lines=24):
         print('TODO : Implement ME!!!!')
         
+        env = dict(TERM="linux", LC_ALL="en_GB.UTF-8", COLUMNS=str(columns), LINES=str(lines))
+        
         if True:
             print('Trying PtyProcess API...')
             print('command : [{}]'.format(command))
-            self.ptyproc = winpty.PtyProcess.spawn(command)
+            self.ptyproc = winpty.PtyProcess.spawn(command, \
+                env = env, \
+                #cwd = r'C:\cygwin64\bin' \
+                )
             print('self.ptyproc : {}'.format(self.ptyproc))
             
             p_pid = self.ptyproc.pid
             print('p_pid : {}'.format(p_pid))
+            print('self.ptyproc launch_dir : {}'.format(self.ptyproc.launch_dir))
+            print('self.ptyproc argv : {}'.format(self.ptyproc.argv))
             p_out = self.ptyproc.fileobj
             print('p_out : {}'.format(p_out))
             
@@ -116,8 +124,7 @@ class RogueBox:
             
             #path, *args = shlex.split(command)
             #args = [path] + args
-            #env = dict(TERM="linux", LC_ALL="en_GB.UTF-8",
-            #           COLUMNS=str(columns), LINES=str(lines))
+            #
                        
             # Spawn a new console process, e.g., CMD
             #print('command : [{0}]'.format(command))
@@ -250,7 +257,12 @@ class RogueBox:
         """check if the rogue process exited"""
         
         if self.iswindows:
-            return self.ptyproc.isalive()
+            pty_proc_alive = self.ptyproc.isalive()
+            if not pty_proc_alive:
+                print('pty_proc not alive!!!')
+                print(self.ptyproc)
+                print(self.ptyproc.pid)
+            return pty_proc_alive
         else:
             # logic for non-windows platforms
             try:
