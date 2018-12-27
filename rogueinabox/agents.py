@@ -280,6 +280,13 @@ class QLearnerAgent(LearnerAgent):
         self.configs["iteration"] = 1
         self.configs["actions"] = self.rb.get_actions()
         self.configs["actions_num"] = len(self.configs["actions"])
+        # let's see if we have config values for how often to save progress
+        self.save_progress_every = 100000
+        if 'save_progress_every' in self.configs:
+            self.save_progress_every = int(self.configs['save_progress_every'])
+        self.set_weights_every = 10000
+        if 'set_weights_every' in self.configs:
+            self.set_weights_every = int(self.configs['set_weights_every'])
         # gui stuff
         ui = None
         log_targets = []
@@ -479,12 +486,12 @@ class QLearnerAgent(LearnerAgent):
                                               self.configs["explore_steps"]
             logs = [Log("epsilon", "{}".format(self.configs["epsilon"]), LOG_LEVEL_ALL)]
             self.l.log(logs)
-            if iteration % 100000 == 0:
+            if iteration % self.save_progress_every == 0:
                 self._save_progress()
                 #plottin is disabled because its not compatible with every state
                 #uncomment the next line if needed
                 #self.plot(self.state[0])
-            if iteration % 10000 == 0:
+            if iteration % self.set_weights_every == 0:
                 self.target_model.set_weights(self.model.get_weights())
         if terminal:
             self._train_evaluation_hook_game_over()
