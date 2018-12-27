@@ -28,6 +28,10 @@ def main():
 
     mode = configs["mode"]
     agent_name = configs["agent"]
+    
+    print('configs : {}'.format(configs))
+    print('agent_name : {}'.format(agent_name))
+    print('mode : {}'.format(mode))
 
     agent = getattr(agents, agent_name)(configs)
     try:

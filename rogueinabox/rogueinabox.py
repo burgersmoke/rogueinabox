@@ -27,6 +27,9 @@ import scipy
 
 import rewards
 import states
+import getpass
+
+from sshclient import RogueSSHClient
 
 # make sure that we can choose something that works under Windows
 if os.name == 'nt':
@@ -64,13 +67,28 @@ class RogueBox:
         self.rogue_path = self.configs["rogue"]
 
         self.iswindows = False
-        if os.name == 'nt':
+        self.use_ssh = True
+        
+        if self.use_ssh:
+            print('Setting up to use SSH for Rogue...')
+            self.ssh = RogueSSHClient()
+            password = getpass.getpass('password: ')
+            self.ssh.connect_and_start('192.168.1.88', 'root', password)
+            self.terminal = Terminal(80, 24)
+            self.pid = -1
+            self.pipe = self.ssh
+        elif os.name == 'nt':
             print('Setting up Terminal for Windows...')
             self.iswindows = True
             # make sure to prefix with cygstart
-            win_command = r'C:\cygwin64\bin\cygstart.exe --wait ' + self.rogue_path + '.exe'
+            win_command = r'C:\cygwin64\bin\cygstart.exe --shownormal --wait ' + self.rogue_path + '.exe'
+            #win_command = 'cmd /C ' + self.rogue_path + '.exe'
+            #win_command = self.rogue_path + '.exe'
             self.terminal, self.pid, self.pipe = self.open_terminal_windows(command=win_command)
             print('self.terminal, self.pid, self.pipe : {0}, {1}, {2}'.format(self.terminal, self.pid, self.pipe))
+            
+            #time.sleep(5.0)
+            #print('DONE sleeping...')
         else:
             print('Setting up Terminal for POSIX...')
             self.terminal, self.pid, self.pipe = self.open_terminal(command=self.rogue_path)
@@ -82,7 +100,7 @@ class RogueBox:
         self.player_pos = None
         self.past_positions = []
         time.sleep(0.5)
-        if not self.is_running():
+        if not self.is_running() and not self.iswindows:
             print("Could not find the executable in %s." % self.rogue_path)
             exit()
         self._update_screen()
@@ -98,6 +116,7 @@ class RogueBox:
         print('TODO : Implement ME!!!!')
         
         env = dict(TERM="linux", LC_ALL="en_GB.UTF-8", COLUMNS=str(columns), LINES=str(lines))
+        env['PATH'] = r'c:\cygwin64\bin;' + os.environ.get('PATH', os.defpath)
         
         if True:
             print('Trying PtyProcess API...')
@@ -112,10 +131,11 @@ class RogueBox:
             print('p_pid : {}'.format(p_pid))
             print('self.ptyproc launch_dir : {}'.format(self.ptyproc.launch_dir))
             print('self.ptyproc argv : {}'.format(self.ptyproc.argv))
-            p_out = self.ptyproc.fileobj
+            #p_out = self.ptyproc.fileobj
+            p_out = self.ptyproc
             print('p_out : {}'.format(p_out))
             
-            test_read = self.ptyproc.read()
+            test_read = self.ptyproc.read(65536)
             print(test_read)
             
         else:
@@ -255,8 +275,9 @@ class RogueBox:
 
     def is_running(self):
         """check if the rogue process exited"""
-        
-        if self.iswindows:
+        if self.use_ssh:
+            return self.ssh.is_running()
+        elif self.iswindows:
             pty_proc_alive = self.ptyproc.isalive()
             if not pty_proc_alive:
                 print('pty_proc not alive!!!')
@@ -290,9 +311,15 @@ class RogueBox:
     def send_command(self, command):
         """send a command to rogue"""
         old_screen = self.screen[:]
-        self.pipe.write(command.encode())
+        pipe_command = command
+        if not self.iswindows:
+            pipe_command = command.encode()
+        self.pipe.write(pipe_command)
         if command in self.get_actions():
-            self.pipe.write('\x12'.encode())
+            x12_command = '\x12'
+            if not self.iswindows:
+                x12_command = x12_command.encode()
+            self.pipe.write(x12_command)
         time.sleep(0.01)
         self._update_screen()
         if self._need_to_dismiss():
@@ -392,7 +419,9 @@ class RogueBox:
 
     def reset(self):
         """kill and restart the rogue process"""
-        if self.is_running():
+        if self.use_ssh and self.is_running():
+            self.ssh.kill()
+        elif self.is_running():
             os.kill(self.pid, signal.SIGTERM)
             # wait the process so it doesnt became a zombie
             os.waitpid(self.pid, 0)
