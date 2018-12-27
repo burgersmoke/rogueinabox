@@ -160,7 +160,12 @@ class Sn_StateGenerator(StateGenerator):
         unit = 255/10
         past_positions = self.rb.past_positions
         for i, pos in enumerate(past_positions):
-            state[layer][pos[0]-1][pos[1]] = (i+1)*unit
+            if pos is None:
+                print('WHOA!!! pos is None in Sn_StateGenerator.set_snake_layer!!!')
+            state_layer = state[layer]
+            if state_layer is None:
+                print('WHOA!!! state_layer is None in Sn_StateGenerator.set_snake_layer!!!')
+            state_layer[pos[0]-1][pos[1]] = (i+1)*unit
         return state
 
 
