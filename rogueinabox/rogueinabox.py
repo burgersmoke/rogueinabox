@@ -398,7 +398,10 @@ class RogueBox:
                 self.past_positions = []
             elif len(self.past_positions) > 10:
                 self.past_positions.pop(0)
-        self.past_positions.append(self.player_pos)
+        if self.player_pos is not None:
+            self.past_positions.append(self.player_pos)
+        else:
+            print('Skipping adding past position since it was None...')
 
 
     def count_passables(self):
