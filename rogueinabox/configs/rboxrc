@@ -7,8 +7,9 @@ rogomatic = rogomatic
 mode = play
 # the agent; must be a classname from agents.py
 agent = UserAgent
+#agent = RandomAgent
 # the user interface; can be tk or curses
-userinterface = tk
+userinterface = curses
 # verbosity level
 verbose = 3
 # enable remote debug

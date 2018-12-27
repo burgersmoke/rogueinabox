@@ -33,9 +33,9 @@ class ConfigurationManager:
                 "agent": "UserAgent",
                 "verbose": 0,
                 "logsonfile": True,
-                "userinterface": "tk",
+                "userinterface": "curses",
                 "remote_debug": True,
-                "gui": False,
+                "gui": True,
                 "gui_delay": 100,
             },
             "State": {
