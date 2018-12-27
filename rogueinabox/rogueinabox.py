@@ -67,13 +67,26 @@ class RogueBox:
         self.rogue_path = self.configs["rogue"]
 
         self.iswindows = False
-        self.use_ssh = True
+        self.use_ssh = False
         
-        if self.use_ssh:
+        if 'hostnamessh' in self.configs:
             print('Setting up to use SSH for Rogue...')
+            self.use_ssh = True
+            # let's see if we have a password.  If so, use it.  If not, let's store it
+            hostnamessh = self.configs['hostnamessh']
+            usernamessh = self.configs['usernamessh']
+            passwordssh = None
+            if 'passwordssh' in self.configs:
+                passwordssh = self.configs['passwordssh']
+            else:
+                print('Preparing to connect to [{0}] with user [{1}]'.format(hostnamessh, usernamessh))
+                passwordssh = getpass.getpass('SSH password: ')
+                # store this back in here so we do not need it again
+                self.configs['passwordssh'] = passwordssh
+            
             self.ssh = RogueSSHClient()
-            password = getpass.getpass('password: ')
-            self.ssh.connect_and_start('192.168.1.88', 'root', password)
+            
+            self.ssh.connect_and_start(hostnamessh, usernamessh, passwordssh, rogue_command = self.rogue_path)
             self.terminal = Terminal(80, 24)
             self.pid = -1
             self.pipe = self.ssh
