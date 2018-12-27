@@ -70,7 +70,9 @@ class RogueBox:
         self.use_ssh = False
         
         if 'hostnamessh' in self.configs:
+            print('***************************************************************')
             print('Setting up to use SSH for Rogue...')
+            print('***************************************************************')
             self.use_ssh = True
             # let's see if we have a password.  If so, use it.  If not, let's store it
             hostnamessh = self.configs['hostnamessh']
