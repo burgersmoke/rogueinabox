@@ -16,21 +16,29 @@ class RogueSSHClient(object):
         self.s.load_system_host_keys()
         self.s.set_missing_host_key_policy(paramiko.WarningPolicy)
         
+        print('Attempting to connect over SSH...')
+        
         self.s.connect(hostname, port=port, username=username, password=password)
+        
+        print('Attempting to invoke_shell()')
         
         self.channel = self.s.invoke_shell()
         
-        self.stdin = self.channel.makefile('wb')
-        self.stdout = self.channel.makefile('r')
+        print('channel : '.format(self.channel))
         
-        self.stdin.write('uptime\n')
-        self.stdin.flush()
+        print('invoke_shell() completed')
         
-        self.stdin.write('cd {}'.format(rogue_path) + '\n')
-        self.stdin.flush()
+        #self.stdin = self.channel.makefile('wb')
+        #self.stdout = self.channel.makefile('r')
         
-        self.stdin.write('{} && exit'.format(rogue_command) + '\n')
-        self.stdin.flush()
+        self.channel.send('uptime\n')
+        print(self.channel.recv(65000))
+        
+        self.channel.send('cd {}'.format(rogue_path) + '\n')
+        print(self.channel.recv(65000))
+        
+        self.channel.send('./{} && exit'.format(rogue_command) + '\n')
+        print(self.channel.recv(65000))
         
         #self.s.close()
         
@@ -38,10 +46,10 @@ class RogueSSHClient(object):
         return self.s.get_transport().is_active()
         
     def read(self, size):
-        return self.stdout.read(size)
+        return self.channel.recv(size)
      
     def write(self, str):
-        return self.stdin.write(str)
+        return self.channel.send(str)
         
     def kill(self):
         self.s.close()
