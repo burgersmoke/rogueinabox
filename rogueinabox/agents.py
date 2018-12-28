@@ -280,13 +280,29 @@ class QLearnerAgent(LearnerAgent):
         self.configs["iteration"] = 1
         self.configs["actions"] = self.rb.get_actions()
         self.configs["actions_num"] = len(self.configs["actions"])
+        
         # let's see if we have config values for how often to save progress
         self.save_progress_every = 100000
+        self.set_weights_every = 10000
         if 'save_progress_every' in self.configs:
             self.save_progress_every = int(self.configs['save_progress_every'])
-        self.set_weights_every = 10000
+        
         if 'set_weights_every' in self.configs:
             self.set_weights_every = int(self.configs['set_weights_every'])
+            
+        # model file names
+        self.weights_file_name = 'weights.h5'
+        self.parameters_file_name = 'parameters.csv'
+        self.history_file_name = 'history.pkl'
+        if 'weights_file_name' in self.configs:
+            self.weights_file_name = self.configs['weights_file_name']
+        
+        if 'parameters_file_name' in self.configs:
+            self.parameters_file_name = self.configs['parameters_file_name']
+            
+        if 'history_file_name' in self.configs:
+            self.history_file_name = self.configs['history_file_name']
+            
         # gui stuff
         ui = None
         log_targets = []
@@ -314,21 +330,21 @@ class QLearnerAgent(LearnerAgent):
 
     def _load_progress(self):
         # model weights
-        if os.path.isfile("assets/weights.h5"):
+        if os.path.isfile("assets/{0}".format(self.weights_file_name)):
             print("loading weights...")
-            self.model.load_weights("assets/weights.h5")
+            self.model.load_weights("assets/{0}".format(self.weights_file_name))
             self.target_model.set_weights(self.model.get_weights())
             print("weights loaded!")
 
         # transitions history
         if self.configs["save_history"]:
-            self.history_manager.load_history_from_file("assets/history.pkl")
+            self.history_manager.load_history_from_file("assets/{0}".format(self.history_file_name))
 
         # parameters
         # only float can be loaded like this for now
-        if os.path.isfile("assets/parameters.csv"):
+        if os.path.isfile("assets/{0}".format(self.parameters_file_name)):
             print("loading parameters...")
-            with open("assets/parameters.csv") as parameters:
+            with open("assets/{0}".format(self.parameters_file_name)) as parameters:
                 reader = csv.reader(parameters)
                 for row in reader:
                     try:
@@ -344,13 +360,13 @@ class QLearnerAgent(LearnerAgent):
             os.makedirs("assets")
 
         print("saving weights...")
-        self.model.save_weights("assets/weights.h5", overwrite=True)
+        self.model.save_weights("assets/{0}".format(self.weights_file_name), overwrite=True)
 
         if self.configs["save_history"]:
-            self.history_manager.save_history_on_file("assets/history.pkl")
+            self.history_manager.save_history_on_file("assets/{0}".format(self.history_file_name))
 
         print("saving parameters...")
-        with open("assets/parameters.csv", "w") as parameters:
+        with open("assets/{0}".format(self.parameters_file_name), "w") as parameters:
             writer = csv.writer(parameters)
             writer.writerow(["epsilon", self.configs["epsilon"]])
             writer.writerow(["iteration", self.configs["iteration"]])
