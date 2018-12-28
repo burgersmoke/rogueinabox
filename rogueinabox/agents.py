@@ -347,6 +347,9 @@ class QLearnerAgent(LearnerAgent):
             with open("assets/{0}".format(self.parameters_file_name)) as parameters:
                 reader = csv.reader(parameters)
                 for row in reader:
+                    if len(row) < 2:
+                        continue
+                
                     try:
                         # try conversion from string
                         self.configs[row[0]] = float(row[1])
